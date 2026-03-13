@@ -37,10 +37,10 @@ def main():
         sys.exit(1)
 
     header_idx = -1
-    for i, row in df_raw.iterrows():
+    for index, row in df_raw.iterrows():
         row_str = ' '.join(str(x).lower() for x in row.values)
         if 'sicil' in row_str and ('ad' in row_str or 'soyad' in row_str):
-            header_idx = i
+            header_idx = index
             break
             
     if header_idx == -1:
@@ -51,10 +51,10 @@ def main():
     df = df_raw.iloc[header_idx+1:].copy()
     
     def get_col_idx(keywords):
-        for i, h in enumerate(headers):
+        for col_index, h in enumerate(headers):
             h_low = h.lower()
             if all(k.lower() in h_low for k in keywords):
-                return i
+                return col_index
         return -1
 
     sicil_idx = get_col_idx(['sicil'])
@@ -91,7 +91,7 @@ def main():
            'GENEL KONULAR': 't1', 'SAĞLIK': 't2', 'TEKNİK KONULAR 2': 't4', 
            '10TK': 't5', 'TEKNİK KONULAR': 't3', 'ATÖLYE': 't6', 'LOJİSTİK': 't7', 'TİSK': 't8'
         }
-        for i, row in df.iterrows():
+        for _, row in df.iterrows():
             if pd.isna(row.iloc[sicil_idx]) or pd.isna(row.iloc[name_idx]): continue
             sicil = str(row.iloc[sicil_idx]).replace('.0', '').strip()
             name = str(row.iloc[name_idx]).strip()
