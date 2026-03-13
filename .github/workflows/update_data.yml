@@ -1,0 +1,35 @@
+name: Veri Guncelleme Otomasyonu
+
+on:
+  push:
+    paths:
+      - 'personel_egitim.csv'
+
+permissions:
+  contents: write
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Kopyala
+        uses: actions/checkout@v3
+
+      - name: Python Kurulumu
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Gerekli Modulleri Yukle
+        run: pip install pandas
+
+      - name: Veri Donusturme Betigini Calistir
+        run: python process_excel.py
+
+      - name: JSON Dosyasini Commit Et
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data.json
+          git commit -m "Otomatik guncelleme: data.json" || echo "Degisiklik yok"
+          git push
