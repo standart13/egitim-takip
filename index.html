@@ -3,440 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eğitim Takip Matrisi</title>
+    <title>Personel Eğitim Takip</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        body { background-color: #f8fafc; font-family: sans-serif; }
-        .hidden { display: none !important; }
-        .sticky-col-1 { position: sticky; left: 0; z-index: 30; background: white; border-right: 1px solid #e5e7eb; width: 80px; min-width: 80px; }
-        .sticky-col-2 { position: sticky; left: 80px; z-index: 30; background: white; border-right: 1px solid #e5e7eb; width: 160px; min-width: 160px; }
-        .sticky-head-1 { position: sticky; left: 0; top: 0; z-index: 50; background: #f3f4f6; border-right: 1px solid #e5e7eb; width: 80px; min-width: 80px; }
-        .sticky-head-2 { position: sticky; left: 80px; top: 0; z-index: 50; background: #f3f4f6; border-right: 1px solid #e5e7eb; width: 160px; min-width: 160px; }
-        .sticky-top { position: sticky; top: 0; z-index: 40; background: #f3f4f6; }
-    </style>
 </head>
-<body class="flex flex-col h-screen text-slate-800 text-[11px]">
-
-    <header class="bg-white border-b border-gray-200 z-50 shadow-sm flex-none">
-        <div class="max-w-full mx-auto px-4 py-2">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
-                <div>
-                    <h1 class="text-xl font-bold text-gray-900">Eğitim Takip Matrisi</h1>
-                    <div class="flex items-center gap-1 text-[10px] text-gray-500 mt-1">
-                        <i data-lucide="clock" class="w-3 h-3 text-blue-600"></i>
-                        <span>Personel Başı Hedef: <span class="font-bold text-blue-600">12 Saat</span></span>
-                    </div>
-                </div>
-                
-                <div class="flex flex-wrap items-center gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-                    <div class="flex flex-col">
-                        <label class="text-[9px] font-bold text-gray-500 uppercase">İşlem Tarihi</label>
-                        <div class="flex items-center gap-1">
-                            <i data-lucide="calendar" class="w-3 h-3 text-blue-600"></i>
-                            <input type="date" id="action-date" class="bg-transparent text-[11px] font-bold text-gray-900 focus:outline-none cursor-pointer w-24" onchange="updateActionDate(this.value)">
-                        </div>
-                    </div>
-                    <div class="h-6 w-px bg-gray-300 mx-1 hidden md:block"></div>
-                    
-                    <div class="flex gap-1.5">
-                        <input type="file" id="file-upload" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
-                        <button onclick="clearList()" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-2 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1">
-                            <i data-lucide="trash-2" class="w-3 h-3"></i> Temizle
-                        </button>
-                        <button onclick="document.getElementById('file-upload').click()" class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-2 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1">
-                            <i data-lucide="upload" class="w-3 h-3"></i> Excel Yükle
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
-                <div class="bg-blue-50 p-2 rounded border border-blue-100 flex items-center justify-between">
-                    <div>
-                        <span class="text-[9px] font-semibold text-blue-600 uppercase">Tamamlanma Oranı</span>
-                        <div id="stat-percent" class="text-xl font-bold text-blue-800">%0</div>
-                    </div>
-                    <i data-lucide="pie-chart" class="text-blue-300 w-8 h-8"></i>
-                </div>
-                <div class="bg-green-50 p-2 rounded border border-green-100 flex items-center justify-between">
-                    <div>
-                        <span class="text-[9px] font-semibold text-green-600 uppercase">Tam Yetkili</span>
-                        <div id="stat-completed" class="text-xl font-bold text-green-800">0</div>
-                    </div>
-                    <i data-lucide="check-circle" class="text-green-300 w-8 h-8"></i>
-                </div>
-                <div class="bg-red-50 p-2 rounded border border-red-100 flex items-center justify-between">
-                    <div>
-                        <span class="text-[9px] font-semibold text-red-600 uppercase">Eksik / Yenileme</span>
-                        <div id="stat-missing" class="text-xl font-bold text-red-800">0</div>
-                    </div>
-                    <i data-lucide="alert-triangle" class="text-red-300 w-8 h-8"></i>
-                </div>
-            </div>
-
-            <div class="flex flex-col md:flex-row gap-2">
-                <div class="relative flex-grow">
-                    <i data-lucide="search" class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 w-3 h-3"></i>
-                    <input type="text" placeholder="İsim veya Sicil No ile ara..." class="w-full pl-7 pr-3 py-1.5 text-[11px] border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm h-7" oninput="setSearchTerm(this.value)">
-                </div>
-                
-                <div class="flex gap-2">
-                    <div class="relative min-w-[120px]">
-                        <select id="filter-dept" onchange="setFilterDept(this.value)" class="w-full pl-2 pr-6 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none h-7 bg-white text-[11px]">
-                            <option value="">Tüm Departmanlar</option>
-                        </select>
-                        <i data-lucide="filter" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none w-3 h-3"></i>
-                    </div>
-                    <div class="relative min-w-[120px]">
-                        <select id="filter-bolum" onchange="setFilterBolum(this.value)" class="w-full pl-2 pr-6 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none h-7 bg-white text-[11px]">
-                            <option value="">Tüm Bölümler</option>
-                        </select>
-                        <i data-lucide="filter" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none w-3 h-3"></i>
-                    </div>
-                </div>
-            </div>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-7xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">Eğitim Katılım Takip Sistemi</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <input type="text" id="search" placeholder="İsim veya Sicil Ara..." class="p-2 border rounded">
+            <select id="filter-bolum" class="p-2 border rounded"><option value="">Tüm Bölümler</option></select>
+            <select id="filter-dept" class="p-2 border rounded"><option value="">Tüm Departmanlar</option></select>
         </div>
-    </header>
 
-    <main class="flex-1 p-4 overflow-hidden flex flex-col">
-        <div class="bg-white border border-gray-200 shadow-sm rounded flex-1 flex flex-col overflow-hidden">
-            <div class="overflow-auto w-full flex-1 relative">
-                <table class="w-full text-left whitespace-nowrap border-collapse">
-                    <thead id="table-head" class="text-gray-700 bg-gray-50"></thead>
-                    <tbody id="table-body" class="divide-y divide-gray-200"></tbody>
-                </table>
-            </div>
-            <div class="bg-gray-50 border-t border-gray-200 p-2 flex justify-between items-center">
-                <span id="page-info" class="text-[10px] text-gray-600"></span>
-                <div class="flex gap-2">
-                    <button onclick="changePage(-1)" id="btn-prev" class="px-3 py-1 bg-white border border-gray-300 rounded text-[10px] hover:bg-gray-100 disabled:opacity-50">Önceki</button>
-                    <button onclick="changePage(1)" id="btn-next" class="px-3 py-1 bg-white border border-gray-300 rounded text-[10px] hover:bg-gray-100 disabled:opacity-50">Sonraki</button>
-                </div>
-            </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="p-2 border">Sicil</th>
+                        <th class="p-2 border">Ad Soyad</th>
+                        <th class="p-2 border">Bölüm</th>
+                        <th class="p-2 border">Dpt.</th>
+                        <th class="p-2 border">Eğitimler</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr><td colspan="5" class="p-4 text-center">Veriler yükleniyor...</td></tr>
+                </tbody>
+            </table>
         </div>
-    </main>
+    </div>
 
     <script>
-        const TARGET_HOURS = 12;
-        const ITEMS_PER_PAGE = 50;
-        
-        let initialTrainings = [
-            { id: 't1', name: 'YASAL İSG G.K.', duration: 2, minScore: null },
-            { id: 't2', name: 'İSG YASAL SAĞLIK', duration: 2, minScore: null },
-            { id: 't3', name: 'YASAL İSG T.K.', duration: 4, minScore: null },
-            { id: 't4', name: 'YASAL İSG T.K. 2', duration: 4, minScore: null },
-            { id: 't5', name: 'YASAL İSG T.K. 3 (10TK)', duration: 2, minScore: null },
-            { id: 't6', name: 'VR ATÖLYE', duration: 2, minScore: null },
-            { id: 't7', name: 'VR LOJİSTİK', duration: 2, minScore: null },
-            { id: 't8', name: 'TİSK AKADEMİ', duration: 12, minScore: 70 }
-        ];
-
         let employees = [];
-        let trainings = initialTrainings;
-        let actionDate = new Date().toISOString().split('T')[0];
-        let searchTerm = "";
-        let filterBolum = "";
-        let filterDept = "";
-        let currentPage = 1;
-
-        document.getElementById('action-date').value = actionDate;
 
         async function loadData() {
             try {
-                const response = await fetch('data.json?t=' + new Date().getTime(), { cache: 'no-store' });
-                if (!response.ok) throw new Error('Veri dosyası bulunamadı.');
+                const response = await fetch('data.json?v=' + Date.now());
                 employees = await response.json();
-                renderApp();
+                
+                // Filtreleri doldur
+                const bolumler = [...new Set(employees.map(e => String(e.bolumKodu)).filter(Boolean))].sort();
+                const deptler = [...new Set(employees.map(e => String(e.deptKodu)).filter(Boolean))].sort();
+                
+                const bSelect = document.getElementById('filter-bolum');
+                const dSelect = document.getElementById('filter-dept');
+                
+                bolumler.forEach(b => bSelect.innerHTML += `<option value="${b}">${b}</option>`);
+                deptler.forEach(d => dSelect.innerHTML += `<option value="${d}">${d}</option>`);
+                
+                renderTable();
             } catch (error) {
-                if (localStorage.getItem('employees')) {
-                    employees = JSON.parse(localStorage.getItem('employees'));
-                    renderApp();
-                } else {
-                    document.getElementById('table-body').innerHTML = `<tr><td colspan="10" class="p-4 text-center text-red-500">Veri bulunamadı. Lütfen CSV yükleyiniz.</td></tr>`;
-                }
+                document.getElementById('table-body').innerHTML = '<tr><td colspan="5">Veri yüklenemedi.</td></tr>';
             }
         }
 
-        window.onload = loadData;
-
-        function updateActionDate(val) { actionDate = val; }
-        function setSearchTerm(val) { searchTerm = val.toLowerCase(); currentPage = 1; renderApp(); }
-        function setFilterBolum(val) { filterBolum = val; currentPage = 1; renderApp(); }
-        function setFilterDept(val) { filterDept = val; currentPage = 1; renderApp(); }
-        
-        function changePage(direction) {
-            currentPage += direction;
-            renderApp();
-        }
-
-        function getTrainingStatus(record, trainingId) {
-            if (!record) return 'missing';
-            const dateString = typeof record === 'object' ? record.date : record;
-            const score = typeof record === 'object' ? record.score : null;
+        function renderTable() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const bolum = document.getElementById('filter-bolum').value;
+            const dept = document.getElementById('filter-dept').value;
+            const tbody = document.getElementById('table-body');
             
-            const t = trainings.find(tr => tr.id === trainingId);
-            if (t && t.minScore !== null && score !== null && score < t.minScore) {
-                return 'failed';
-            }
-            
-            if (!dateString) return 'missing';
-            
-            const diffMonths = Math.abs(new Date() - new Date(dateString)) / (1000 * 60 * 60 * 24 * 30);
-            if (diffMonths >= 24) return 'expired';
-            if (diffMonths >= 14) return 'warning';
-            return 'valid';
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            return new Intl.DateTimeFormat('tr-TR').format(new Date(dateString));
-        }
-
-        function calculateStats(emp) {
-            let completed = 0;
-            trainings.forEach(t => {
-                if (getTrainingStatus(emp.records[t.id], t.id) === 'valid') completed += t.duration;
-            });
-            return { completed, remaining: Math.max(0, TARGET_HOURS - completed) };
-        }
-
-        function parseTurkishDate(dateStr) {
-            if (!dateStr || typeof dateStr !== 'string') return null;
-            const parts = dateStr.trim().split('.');
-            if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            return dateStr;
-        }
-
-        function findTrainingId(rawName) {
-            if(!rawName) return null;
-            const n = String(rawName).toUpperCase();
-            if(n.includes('GENEL KONULAR')) return 't1';
-            if(n.includes('SAĞLIK')) return 't2';
-            if(n.includes('TEKNİK KONULAR 2')) return 't4';
-            if(n.includes('TEKNİK KONULAR 3') || n.includes('10TK')) return 't5';
-            if(n.includes('TEKNİK KONULAR')) return 't3';
-            if(n.includes('VR ATÖLYE') || n.includes('SANAL GERÇEKLİK EĞİTİMİ ATÖLYE')) return 't6';
-            if(n.includes('VR LOJİSTİK') || n.includes('SANAL GERÇEKLİK EĞİTİMİ LOJİSTİK')) return 't7';
-            if(n.includes('TİSK')) return 't8';
-            return null;
-        }
-
-        function handleFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                const wb = XLSX.read(evt.target.result, { type: 'binary' });
-                const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-                
-                let headerIdx = -1;
-                for (let i=0; i<data.length; i++) {
-                    const rowStr = String(data[i]).toLowerCase();
-                    if (rowStr.includes('sicil') && (rowStr.includes('ad') || rowStr.includes('soyad'))) {
-                        headerIdx = i; break;
-                    }
-                }
-                
-                if (headerIdx === -1) { alert("Header bulunamadı."); return; }
-                
-                const headers = data[headerIdx];
-                const rows = data.slice(headerIdx + 1);
-                
-                const sicilIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('sicil'));
-                const nameIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('ad') && String(h).toLowerCase().includes('soyad'));
-                const egitimAdIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('eğitim') && String(h).toLowerCase().includes('ad'));
-                const notIdx = headers.findIndex(h => h && (String(h).toLowerCase().includes('not') || String(h).toLowerCase().includes('puan')));
-                const tarihIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('tarih'));
-                const bolumIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('bölüm'));
-                const deptIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('dept'));
-
-                let parsedEmployeesMap = new Map();
-
-                if (egitimAdIdx !== -1 && tarihIdx !== -1) {
-                    rows.forEach(r => {
-                        if(!r[sicilIdx] || !r[nameIdx]) return;
-                        const sicil = String(r[sicilIdx]).split('.')[0].trim();
-                        const name = String(r[nameIdx]).trim();
-                        const bolum = bolumIdx !== -1 && r[bolumIdx] ? String(r[bolumIdx]).replace('.0','') : '';
-                        const dept = deptIdx !== -1 && r[deptIdx] ? String(r[deptIdx]).replace('.0','') : '';
-                        
-                        if (!parsedEmployeesMap.has(sicil)) {
-                            parsedEmployeesMap.set(sicil, { id: sicil, sicil, name, bolumKodu: bolum, deptKodu: dept, records: {} });
-                        }
-                        
-                        const emp = parsedEmployeesMap.get(sicil);
-                        const tId = findTrainingId(String(r[egitimAdIdx]));
-                        
-                        if (tId && r[tarihIdx]) {
-                            let parsedDate = parseTurkishDate(String(r[tarihIdx]));
-                            if (!isNaN(parseFloat(r[tarihIdx])) && parseFloat(r[tarihIdx]) > 40000) {
-                                const dateObj = new Date(Math.round((parseFloat(r[tarihIdx]) - 25569) * 86400 * 1000));
-                                parsedDate = dateObj.toISOString().split('T')[0];
-                            }
-                            
-                            let score = null;
-                            if (notIdx !== -1 && r[notIdx] !== undefined) {
-                                const sc = parseFloat(String(r[notIdx]).replace(',', '.'));
-                                if (!isNaN(sc)) score = sc;
-                            }
-                            emp.records[tId] = { date: parsedDate, score: score };
-                        }
-                    });
-                } else {
-                    const mapWide = {
-                        'GENEL KONULAR': 't1', 'SAĞLIK': 't2', 'TEKNİK KONULAR 2': 't4', 
-                        '10TK': 't5', 'TEKNİK KONULAR': 't3', 'ATÖLYE': 't6', 'LOJİSTİK': 't7', 'TİSK': 't8'
-                    };
-                    rows.forEach((r, i) => {
-                        if(!r[sicilIdx] || !r[nameIdx]) return;
-                        const sicil = String(r[sicilIdx]).split('.')[0].trim();
-                        const name = String(r[nameIdx]).trim();
-                        const bolum = bolumIdx !== -1 && r[bolumIdx] ? String(r[bolumIdx]).replace('.0','') : '';
-                        const dept = deptIdx !== -1 && r[deptIdx] ? String(r[deptIdx]).replace('.0','') : '';
-                        
-                        const emp = { id: sicil, sicil, name, bolumKodu: bolum, deptKodu: dept, records: {} };
-                        
-                        headers.forEach((hName, hIdx) => {
-                            if (!hName) return;
-                            Object.keys(mapWide).forEach(k => {
-                                if (String(hName).toUpperCase().includes(k)) {
-                                    const val = r[hIdx];
-                                    if (val) {
-                                        let parsedDate = parseTurkishDate(String(val));
-                                        if (!isNaN(parseFloat(val)) && parseFloat(val) > 40000) {
-                                            const dateObj = new Date(Math.round((parseFloat(val) - 25569) * 86400 * 1000));
-                                            parsedDate = dateObj.toISOString().split('T')[0];
-                                        }
-                                        let score = null;
-                                        if (hIdx + 1 < headers.length && (String(headers[hIdx+1]).toUpperCase().includes('NOT') || String(headers[hIdx+1]).toUpperCase().includes('PUAN'))) {
-                                            const sc = parseFloat(String(r[hIdx+1]).replace(',', '.'));
-                                            if (!isNaN(sc)) score = sc;
-                                        }
-                                        if(parsedDate && !parsedDate.includes('1899')) {
-                                            emp.records[mapWide[k]] = { date: parsedDate, score: score };
-                                        }
-                                    }
-                                }
-                            });
-                        });
-                        parsedEmployeesMap.set(sicil, emp);
-                    });
-                }
-
-                employees = Array.from(parsedEmployeesMap.values());
-                localStorage.setItem('employees', JSON.stringify(employees));
-                renderApp();
-            };
-            reader.readAsBinaryString(file);
-            e.target.value = '';
-        }
-
-        function clearList() {
-            employees = [];
-            localStorage.removeItem('employees');
-            renderApp();
-        }
-
-        function renderApp() {
             const filtered = employees.filter(e => {
-                const searchMatch = e.name.toLowerCase().includes(searchTerm) || e.sicil.includes(searchTerm);
-                const bolumMatch = filterBolum ? e.bolumKodu === filterBolum : true;
-                const deptMatch = filterDept ? e.deptKodu === filterDept : true;
-                return searchMatch && bolumMatch && deptMatch;
+                const matchSearch = e.adSoyad.toLowerCase().includes(search) || e.sicil.includes(search);
+                const matchBolum = !bolum || String(e.bolumKodu) === bolum;
+                const matchDept = !dept || String(e.deptKodu) === dept;
+                return matchSearch && matchBolum && matchDept;
             });
 
-            const deptSet = new Set(), bolumSet = new Set();
-            employees.forEach(e => { if (e.deptKodu) deptSet.add(e.deptKodu); if (e.bolumKodu) bolumSet.add(e.bolumKodu); });
-            
-            const deptSelect = document.getElementById('filter-dept');
-            if (deptSelect.options.length <= 1) {
-                deptSelect.innerHTML = '<option value="">Tüm Departmanlar</option>' + Array.from(deptSet).sort().map(d => `<option value="${d}">${d}</option>`).join('');
-            }
-            
-            const bolumSelect = document.getElementById('filter-bolum');
-            if (bolumSelect.options.length <= 1) {
-                bolumSelect.innerHTML = '<option value="">Tüm Bölümler</option>' + Array.from(bolumSet).sort().map(b => `<option value="${b}">${b}</option>`).join('');
-            }
-
-            let fullCount = 0;
-            filtered.forEach(e => { if (calculateStats(e).remaining === 0) fullCount++; });
-            
-            document.getElementById('stat-percent').innerText = `%${filtered.length ? Math.round((fullCount/filtered.length)*100) : 0}`;
-            document.getElementById('stat-completed').innerText = fullCount;
-            document.getElementById('stat-missing').innerText = filtered.length - fullCount;
-
-            const thead = `<tr>
-                <th class="sticky-head-1 px-3 py-2 font-bold text-center border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Sicil</th>
-                <th class="sticky-head-2 px-3 py-2 font-bold border-b shadow-[5px_0_5px_-2px_rgba(0,0,0,0.1)]">Ad Soyad</th>
-                <th class="sticky-top px-3 py-2 font-bold border-r border-b w-24">Bölüm</th>
-                <th class="sticky-top px-3 py-2 font-bold border-r border-b w-16">Dept</th>
-                <th class="sticky-top px-1 py-2 font-bold text-center w-16 bg-red-50/90 text-red-900 border-r border-b leading-tight">Kalan<br><span class="text-[9px] font-normal opacity-70">(Saat)</span></th>
-                ${trainings.map(t => `<th class="sticky-top px-2 py-2 border-b font-bold min-w-[90px] text-center border-r"><div class="flex flex-col items-center justify-center h-full"><span class="text-[10px] font-extrabold text-wrap max-w-[80px] mb-1">${t.name}</span><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-gray-200">${t.duration} S</span></div></th>`).join('')}
-            </tr>`;
-            document.getElementById('table-head').innerHTML = thead;
-
-            const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-            
-            document.getElementById('page-info').innerText = `Sayfa ${currentPage} / ${totalPages} (Toplam ${filtered.length} Kayıt)`;
-            document.getElementById('btn-prev').disabled = currentPage === 1;
-            document.getElementById('btn-next').disabled = currentPage === totalPages;
-
-            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-            const paginated = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-            let tbody = '';
-            paginated.forEach(emp => {
-                const stats = calculateStats(emp);
-                let row = `<tr class="hover:bg-blue-50/30 transition-colors">
-                    <td class="sticky-col-1 px-3 py-1.5 font-medium text-center border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-[11px]">${emp.sicil}</td>
-                    <td class="sticky-col-2 px-3 py-1.5 font-medium border-b shadow-[5px_0_5px_-2px_rgba(0,0,0,0.1)] text-[11px]"><div class="truncate">${emp.name}</div></td>
-                    <td class="px-3 py-1.5 text-gray-600 border-r border-b text-[11px]">${emp.bolumKodu || '-'}</td>
-                    <td class="px-3 py-1.5 text-gray-600 border-r border-b text-[11px]">${emp.deptKodu || '-'}</td>
-                    <td class="px-1 py-1.5 text-center border-r border-b font-bold ${stats.remaining > 0 ? 'bg-red-50/20 text-red-600' : 'bg-green-50/20 text-green-600'} text-[12px]">${stats.remaining}</td>`;
-                
-                trainings.forEach(t => {
-                    const record = emp.records[t.id];
-                    const status = getTrainingStatus(record, t.id);
-                    const dateStr = record ? (typeof record === 'object' ? record.date : record) : null;
-                    const scoreVal = record && typeof record === 'object' ? record.score : null;
-                    const scoreDisp = scoreVal !== null ? ` (${scoreVal})` : '';
-
-                    let cellClass = "border-r border-b";
-                    let content = '';
-                    
-                    if (status === 'valid') {
-                        cellClass += " bg-green-100/50 text-green-800";
-                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><div class="flex items-center gap-1 text-[10px]"><i data-lucide="check-circle" class="w-3 h-3 text-green-600"></i><span class="text-green-700">${formatDate(dateStr)}</span></div><span class="text-[8px] opacity-80 mt-0.5">GEÇTİ${scoreDisp}</span></div>`;
-                    } else if (status === 'warning') {
-                        cellClass += " bg-orange-100 text-orange-800 border-2 border-orange-300 border-dashed";
-                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-orange-600">SÜRE BİTİYOR</span><span class="text-[9px]">${formatDate(dateStr)}</span><span class="text-[8px] opacity-80 mt-0.5">GEÇTİ${scoreDisp}</span></div>`;
-                    } else if (status === 'expired') {
-                        cellClass += " bg-red-100 text-red-800 border-2 border-red-300";
-                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-red-600">SÜRESİ DOLDU</span><span class="text-[9px] line-through decoration-red-400 opacity-70">${formatDate(dateStr)}</span></div>`;
-                    } else if (status === 'failed') {
-                        cellClass += " bg-red-50 text-red-800 border-2 border-red-400";
-                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-red-700">BAŞARISIZ${scoreDisp}</span><span class="text-[8px] opacity-70 mt-0.5">${formatDate(dateStr)}</span></div>`;
-                    } else {
-                        cellClass += " bg-white";
-                        content = `<div class="w-1.5 h-1.5 rounded-full bg-gray-200 mx-auto"></div>`;
-                    }
-                    
-                    row += `<td class="px-1 py-1 text-center h-10 ${cellClass}">${content}</td>`;
-                });
-                row += `</tr>`;
-                tbody += row;
-            });
-            
-            if(paginated.length === 0) {
-                tbody = `<tr><td colspan="${trainings.length + 5}" class="px-4 py-8 text-center text-gray-500 bg-gray-50">Kayıt bulunamadı</td></tr>`;
-            }
-            
-            document.getElementById('table-body').innerHTML = tbody;
-            lucide.createIcons();
+            tbody.innerHTML = filtered.map(e => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-2 border">${e.sicil}</td>
+                    <td class="p-2 border">${e.adSoyad}</td>
+                    <td class="p-2 border">${e.bolumKodu}</td>
+                    <td class="p-2 border">${e.deptKodu}</td>
+                    <td class="p-2 border text-xs">
+                        ${e.egitimler.map(eg => `<span class="inline-block bg-blue-100 m-1 p-1 rounded">${eg.ad} (${eg.tarih})</span>`).join('')}
+                    </td>
+                </tr>
+            `).join('');
         }
+
+        document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', renderTable));
+        window.onload = loadData;
     </script>
 </body>
 </html>
