@@ -6,6 +6,7 @@
     <title>Eğitim Takip Matrisi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { background-color: #f8fafc; font-family: sans-serif; }
         .hidden { display: none !important; }
@@ -36,6 +37,17 @@
                             <i data-lucide="calendar" class="w-3 h-3 text-blue-600"></i>
                             <input type="date" id="action-date" class="bg-transparent text-[11px] font-bold text-gray-900 focus:outline-none cursor-pointer w-24" onchange="updateActionDate(this.value)">
                         </div>
+                    </div>
+                    <div class="h-6 w-px bg-gray-300 mx-1 hidden md:block"></div>
+                    
+                    <div class="flex gap-1.5">
+                        <input type="file" id="file-upload" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFileUpload(event)">
+                        <button onclick="clearList()" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-2 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Temizle
+                        </button>
+                        <button onclick="document.getElementById('file-upload').click()" class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-2 py-1.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1">
+                            <i data-lucide="upload" class="w-3 h-3"></i> Excel Yükle
+                        </button>
                     </div>
                 </div>
             </div>
@@ -111,14 +123,14 @@
         const ITEMS_PER_PAGE = 50;
         
         let initialTrainings = [
-            { id: 't1', name: 'YASAL İSG G.K.', duration: 2 },
-            { id: 't2', name: 'İSG YASAL SAĞLIK', duration: 2 },
-            { id: 't3', name: 'YASAL İSG T.K.', duration: 4 },
-            { id: 't4', name: 'YASAL İSG T.K. 2', duration: 4 },
-            { id: 't5', name: 'YASAL İSG T.K. 3 (10TK)', duration: 2 },
-            { id: 't6', name: 'VR ATÖLYE', duration: 2 },
-            { id: 't7', name: 'VR LOJİSTİK', duration: 2 },
-            { id: 't8', name: 'TİSK AKADEMİ', duration: 12 }
+            { id: 't1', name: 'YASAL İSG G.K.', duration: 2, minScore: null },
+            { id: 't2', name: 'İSG YASAL SAĞLIK', duration: 2, minScore: null },
+            { id: 't3', name: 'YASAL İSG T.K.', duration: 4, minScore: null },
+            { id: 't4', name: 'YASAL İSG T.K. 2', duration: 4, minScore: null },
+            { id: 't5', name: 'YASAL İSG T.K. 3 (10TK)', duration: 2, minScore: null },
+            { id: 't6', name: 'VR ATÖLYE', duration: 2, minScore: null },
+            { id: 't7', name: 'VR LOJİSTİK', duration: 2, minScore: null },
+            { id: 't8', name: 'TİSK AKADEMİ', duration: 12, minScore: 70 }
         ];
 
         let employees = [];
@@ -138,7 +150,12 @@
                 employees = await response.json();
                 renderApp();
             } catch (error) {
-                document.getElementById('table-body').innerHTML = `<tr><td class="p-4 text-center text-red-500">Veri yüklenemedi: data.json eksik veya hatalı.</td></tr>`;
+                if (localStorage.getItem('employees')) {
+                    employees = JSON.parse(localStorage.getItem('employees'));
+                    renderApp();
+                } else {
+                    document.getElementById('table-body').innerHTML = `<tr><td class="p-4 text-center text-red-500">Kayıt bulunamadı. Lütfen Excel dosyası yükleyin.</td></tr>`;
+                }
             }
         }
 
@@ -154,8 +171,18 @@
             renderApp();
         }
 
-        function getTrainingStatus(dateString) {
+        function getTrainingStatus(record, trainingId) {
+            if (!record) return 'missing';
+            const dateString = typeof record === 'object' ? record.date : record;
+            const score = typeof record === 'object' ? record.score : null;
+            
+            const t = trainings.find(tr => tr.id === trainingId);
+            if (t && t.minScore !== null && score !== null && score < t.minScore) {
+                return 'failed';
+            }
+            
             if (!dateString) return 'missing';
+            
             const diffMonths = Math.abs(new Date() - new Date(dateString)) / (1000 * 60 * 60 * 24 * 30);
             if (diffMonths >= 24) return 'expired';
             if (diffMonths >= 14) return 'warning';
@@ -170,9 +197,146 @@
         function calculateStats(emp) {
             let completed = 0;
             trainings.forEach(t => {
-                if (getTrainingStatus(emp.records[t.id]) === 'valid') completed += t.duration;
+                if (getTrainingStatus(emp.records[t.id], t.id) === 'valid') completed += t.duration;
             });
             return { completed, remaining: Math.max(0, TARGET_HOURS - completed) };
+        }
+
+        function parseTurkishDate(dateStr) {
+            if (!dateStr || typeof dateStr !== 'string') return null;
+            const parts = dateStr.trim().split('.');
+            if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            return dateStr;
+        }
+
+        function findTrainingId(rawName) {
+            if(!rawName) return null;
+            const n = String(rawName).toUpperCase();
+            if(n.includes('GENEL KONULAR')) return 't1';
+            if(n.includes('SAĞLIK')) return 't2';
+            if(n.includes('TEKNİK KONULAR 2')) return 't4';
+            if(n.includes('TEKNİK KONULAR 3') || n.includes('10TK')) return 't5';
+            if(n.includes('TEKNİK KONULAR')) return 't3';
+            if(n.includes('VR ATÖLYE') || n.includes('SANAL GERÇEKLİK EĞİTİMİ ATÖLYE')) return 't6';
+            if(n.includes('VR LOJİSTİK') || n.includes('SANAL GERÇEKLİK EĞİTİMİ LOJİSTİK')) return 't7';
+            if(n.includes('TİSK')) return 't8';
+            return null;
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                
+                let headerIdx = -1;
+                for (let i=0; i<data.length; i++) {
+                    const rowStr = String(data[i]).toLowerCase();
+                    if (rowStr.includes('sicil') && (rowStr.includes('ad') || rowStr.includes('soyad'))) {
+                        headerIdx = i; break;
+                    }
+                }
+                
+                if (headerIdx === -1) { alert("Header bulunamadı."); return; }
+                
+                const headers = data[headerIdx];
+                const rows = data.slice(headerIdx + 1);
+                
+                const sicilIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('sicil'));
+                const nameIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('ad') && String(h).toLowerCase().includes('soyad'));
+                const egitimAdIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('eğitim') && String(h).toLowerCase().includes('ad'));
+                const notIdx = headers.findIndex(h => h && (String(h).toLowerCase().includes('not') || String(h).toLowerCase().includes('puan')));
+                const tarihIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('tarih'));
+                const bolumIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('bölüm'));
+                const deptIdx = headers.findIndex(h => h && String(h).toLowerCase().includes('dept'));
+
+                let parsedEmployeesMap = new Map();
+
+                if (egitimAdIdx !== -1 && tarihIdx !== -1) {
+                    rows.forEach(r => {
+                        if(!r[sicilIdx] || !r[nameIdx]) return;
+                        const sicil = String(r[sicilIdx]).split('.')[0].trim();
+                        const name = String(r[nameIdx]).trim();
+                        const bolum = bolumIdx !== -1 && r[bolumIdx] ? String(r[bolumIdx]).replace('.0','') : '';
+                        const dept = deptIdx !== -1 && r[deptIdx] ? String(r[deptIdx]).replace('.0','') : '';
+                        
+                        if (!parsedEmployeesMap.has(sicil)) {
+                            parsedEmployeesMap.set(sicil, { id: sicil, sicil, name, bolumKodu: bolum, deptKodu: dept, records: {} });
+                        }
+                        
+                        const emp = parsedEmployeesMap.get(sicil);
+                        const tId = findTrainingId(String(r[egitimAdIdx]));
+                        
+                        if (tId && r[tarihIdx]) {
+                            let parsedDate = parseTurkishDate(String(r[tarihIdx]));
+                            if (!isNaN(parseFloat(r[tarihIdx])) && parseFloat(r[tarihIdx]) > 40000) {
+                                const dateObj = new Date(Math.round((parseFloat(r[tarihIdx]) - 25569) * 86400 * 1000));
+                                parsedDate = dateObj.toISOString().split('T')[0];
+                            }
+                            
+                            let score = null;
+                            if (notIdx !== -1 && r[notIdx] !== undefined) {
+                                const sc = parseFloat(String(r[notIdx]).replace(',', '.'));
+                                if (!isNaN(sc)) score = sc;
+                            }
+                            emp.records[tId] = { date: parsedDate, score: score };
+                        }
+                    });
+                } else {
+                    const mapWide = {
+                        'GENEL KONULAR': 't1', 'SAĞLIK': 't2', 'TEKNİK KONULAR 2': 't4', 
+                        '10TK': 't5', 'TEKNİK KONULAR': 't3', 'ATÖLYE': 't6', 'LOJİSTİK': 't7', 'TİSK': 't8'
+                    };
+                    rows.forEach((r, i) => {
+                        if(!r[sicilIdx] || !r[nameIdx]) return;
+                        const sicil = String(r[sicilIdx]).split('.')[0].trim();
+                        const name = String(r[nameIdx]).trim();
+                        const bolum = bolumIdx !== -1 && r[bolumIdx] ? String(r[bolumIdx]).replace('.0','') : '';
+                        const dept = deptIdx !== -1 && r[deptIdx] ? String(r[deptIdx]).replace('.0','') : '';
+                        
+                        const emp = { id: sicil, sicil, name, bolumKodu: bolum, deptKodu: dept, records: {} };
+                        
+                        headers.forEach((hName, hIdx) => {
+                            if (!hName) return;
+                            Object.keys(mapWide).forEach(k => {
+                                if (String(hName).toUpperCase().includes(k)) {
+                                    const val = r[hIdx];
+                                    if (val) {
+                                        let parsedDate = parseTurkishDate(String(val));
+                                        if (!isNaN(parseFloat(val)) && parseFloat(val) > 40000) {
+                                            const dateObj = new Date(Math.round((parseFloat(val) - 25569) * 86400 * 1000));
+                                            parsedDate = dateObj.toISOString().split('T')[0];
+                                        }
+                                        let score = null;
+                                        if (hIdx + 1 < headers.length && (String(headers[hIdx+1]).toUpperCase().includes('NOT') || String(headers[hIdx+1]).toUpperCase().includes('PUAN'))) {
+                                            const sc = parseFloat(String(r[hIdx+1]).replace(',', '.'));
+                                            if (!isNaN(sc)) score = sc;
+                                        }
+                                        if(parsedDate && !parsedDate.includes('1899')) {
+                                            emp.records[mapWide[k]] = { date: parsedDate, score: score };
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                        parsedEmployeesMap.set(sicil, emp);
+                    });
+                }
+
+                employees = Array.from(parsedEmployeesMap.values());
+                localStorage.setItem('employees', JSON.stringify(employees));
+                renderApp();
+            };
+            reader.readAsBinaryString(file);
+            e.target.value = '';
+        }
+
+        function clearList() {
+            employees = [];
+            localStorage.removeItem('employees');
+            renderApp();
         }
 
         function renderApp() {
@@ -234,20 +398,27 @@
                     <td class="px-1 py-1.5 text-center border-r border-b font-bold ${stats.remaining > 0 ? 'bg-red-50/20 text-red-600' : 'bg-green-50/20 text-green-600'} text-[12px]">${stats.remaining}</td>`;
                 
                 trainings.forEach(t => {
-                    const date = emp.records[t.id];
-                    const status = getTrainingStatus(date);
+                    const record = emp.records[t.id];
+                    const status = getTrainingStatus(record, t.id);
+                    const dateStr = record ? (typeof record === 'object' ? record.date : record) : null;
+                    const scoreVal = record && typeof record === 'object' ? record.score : null;
+                    const scoreDisp = scoreVal !== null ? ` (${scoreVal})` : '';
+
                     let cellClass = "border-r border-b";
                     let content = '';
                     
                     if (status === 'valid') {
                         cellClass += " bg-green-100/50 text-green-800";
-                        content = `<div class="flex items-center justify-center gap-1 font-bold text-[10px]"><i data-lucide="check-circle" class="w-3 h-3 text-green-600"></i><span>${formatDate(date)}</span></div>`;
+                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><div class="flex items-center gap-1 text-[10px]"><i data-lucide="check-circle" class="w-3 h-3 text-green-600"></i><span class="text-green-700">${formatDate(dateStr)}</span></div><span class="text-[8px] opacity-80 mt-0.5">GEÇTİ${scoreDisp}</span></div>`;
                     } else if (status === 'warning') {
                         cellClass += " bg-orange-100 text-orange-800 border-2 border-orange-300 border-dashed";
-                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-orange-600">SÜRE BİTİYOR</span><span class="text-[9px]">${formatDate(date)}</span></div>`;
+                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-orange-600">SÜRE BİTİYOR</span><span class="text-[9px]">${formatDate(dateStr)}</span><span class="text-[8px] opacity-80 mt-0.5">GEÇTİ${scoreDisp}</span></div>`;
                     } else if (status === 'expired') {
                         cellClass += " bg-red-100 text-red-800 border-2 border-red-300";
-                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-red-600">SÜRESİ DOLDU</span><span class="text-[9px] line-through decoration-red-400 opacity-70">${formatDate(date)}</span></div>`;
+                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-red-600">SÜRESİ DOLDU</span><span class="text-[9px] line-through decoration-red-400 opacity-70">${formatDate(dateStr)}</span></div>`;
+                    } else if (status === 'failed') {
+                        cellClass += " bg-red-50 text-red-800 border-2 border-red-400";
+                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-red-700">BAŞARISIZ${scoreDisp}</span><span class="text-[8px] opacity-70 mt-0.5">${formatDate(dateStr)}</span></div>`;
                     } else {
                         cellClass += " bg-white";
                         content = `<div class="w-1.5 h-1.5 rounded-full bg-gray-200 mx-auto"></div>`;
