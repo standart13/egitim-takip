@@ -145,7 +145,7 @@
 
         async function loadData() {
             try {
-                const response = await fetch('data.json');
+                const response = await fetch('data.json?t=' + new Date().getTime(), { cache: 'no-store' });
                 if (!response.ok) throw new Error('Veri dosyası bulunamadı.');
                 employees = await response.json();
                 renderApp();
@@ -154,7 +154,7 @@
                     employees = JSON.parse(localStorage.getItem('employees'));
                     renderApp();
                 } else {
-                    document.getElementById('table-body').innerHTML = `<tr><td class="p-4 text-center text-red-500">Kayıt bulunamadı. Lütfen Excel dosyası yükleyin.</td></tr>`;
+                    document.getElementById('table-body').innerHTML = `<tr><td colspan="10" class="p-4 text-center text-red-500">Veri bulunamadı. Lütfen CSV yükleyiniz.</td></tr>`;
                 }
             }
         }
