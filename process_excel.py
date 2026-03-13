@@ -30,17 +30,31 @@ def parse_excel_date(val):
     return str(val)
 
 def main():
-    try:
-        df_raw = pd.read_csv('personel_egitim.csv', header=None)
-    except Exception as e:
-        print(f"Hata: {e}")
+    file_path = 'personel_egitim.csv'
+    encodings = ['utf-8', 'utf-8-sig', 'iso-8859-9', 'windows-1254', 'cp1254']
+    separators = [',', ';', '\t']
+    
+    df_raw = None
+    for enc in encodings:
+        for sep in separators:
+            try:
+                df_raw = pd.read_csv(file_path, header=None, encoding=enc, sep=sep, engine='python', on_bad_lines='skip')
+                if len(df_raw.columns) > 1:
+                    break
+            except Exception:
+                continue
+        if df_raw is not None and len(df_raw.columns) > 1:
+            break
+            
+    if df_raw is None or len(df_raw.columns) <= 1:
+        print("Hata: CSV okunamadı. CSV UTF-8 formatinda oldugunu dogrulayin.")
         sys.exit(1)
 
     header_idx = -1
-    for i, row in df_raw.iterrows():
+    for index, row in df_raw.iterrows():
         row_str = ' '.join(str(x).lower() for x in row.values)
         if 'sicil' in row_str and ('ad' in row_str or 'soyad' in row_str):
-            header_idx = i
+            header_idx = index
             break
             
     if header_idx == -1:
