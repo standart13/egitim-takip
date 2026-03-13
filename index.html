@@ -3,88 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personel Eğitim Takip</title>
+    <title>Eğitim Takip Matrisi</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .sticky-col { position: sticky; left: 0; background: white; z-index: 10; border-right: 2px solid #e5e7eb; }
+        .sticky-col-2 { position: sticky; left: 80px; background: white; z-index: 10; border-right: 2px solid #e5e7eb; }
+    </style>
 </head>
-<body class="bg-gray-100 p-4">
-    <div class="max-w-7xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-        <h1 class="text-2xl font-bold mb-6 text-gray-800">Eğitim Katılım Takip Sistemi</h1>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <input type="text" id="search" placeholder="İsim veya Sicil Ara..." class="p-2 border rounded">
-            <select id="filter-bolum" class="p-2 border rounded"><option value="">Tüm Bölümler</option></select>
-            <select id="filter-dept" class="p-2 border rounded"><option value="">Tüm Departmanlar</option></select>
-        </div>
+<body class="bg-slate-50 text-[11px]">
+    <div class="flex flex-col h-screen">
+        <header class="bg-white border-b p-4 shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-xl font-bold text-slate-800">Eğitim Takip Matrisi</h1>
+                <div class="flex gap-2">
+                    <input type="text" id="search" placeholder="Sicil/İsim Ara..." class="border p-2 rounded w-64 outline-none focus:ring-1 focus:ring-blue-500">
+                    <select id="f-bolum" class="border p-2 rounded bg-white"><option value="">Tüm Bölümler</option></select>
+                    <select id="f-dept" class="border p-2 rounded bg-white"><option value="">Tüm Departmanlar</option></select>
+                </div>
+            </div>
+        </header>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-200">
-                        <th class="p-2 border">Sicil</th>
-                        <th class="p-2 border">Ad Soyad</th>
-                        <th class="p-2 border">Bölüm</th>
-                        <th class="p-2 border">Dpt.</th>
-                        <th class="p-2 border">Eğitimler</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <tr><td colspan="5" class="p-4 text-center">Veriler yükleniyor...</td></tr>
-                </tbody>
-            </table>
-        </div>
+        <main class="flex-1 overflow-auto p-4">
+            <div class="bg-white border rounded shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead id="t-head" class="bg-slate-100 sticky top-0 z-20"></thead>
+                    <tbody id="t-body" class="divide-y"></tbody>
+                </table>
+            </div>
+        </main>
     </div>
 
     <script>
         let employees = [];
+        let trainings = [];
 
         async function loadData() {
             try {
-                const response = await fetch('data.json?v=' + Date.now());
-                employees = await response.json();
+                const res = await fetch('data.json?v=' + Date.now());
+                employees = await res.json();
                 
-                // Filtreleri doldur
-                const bolumler = [...new Set(employees.map(e => String(e.bolumKodu)).filter(Boolean))].sort();
-                const deptler = [...new Set(employees.map(e => String(e.deptKodu)).filter(Boolean))].sort();
-                
-                const bSelect = document.getElementById('filter-bolum');
-                const dSelect = document.getElementById('filter-dept');
-                
-                bolumler.forEach(b => bSelect.innerHTML += `<option value="${b}">${b}</option>`);
-                deptler.forEach(d => dSelect.innerHTML += `<option value="${d}">${d}</option>`);
-                
-                renderTable();
-            } catch (error) {
-                document.getElementById('table-body').innerHTML = '<tr><td colspan="5">Veri yüklenemedi.</td></tr>';
+                if(employees.length > 0) {
+                    trainings = Object.keys(employees[0].records);
+                    setupFilters();
+                    renderApp();
+                }
+            } catch (e) {
+                document.getElementById('t-body').innerHTML = '<tr><td class="p-4 text-red-500">Veri yüklenemedi. data.json kontrol edin.</td></tr>';
             }
         }
 
-        function renderTable() {
-            const search = document.getElementById('search').value.toLowerCase();
-            const bolum = document.getElementById('filter-bolum').value;
-            const dept = document.getElementById('filter-dept').value;
-            const tbody = document.getElementById('table-body');
-            
+        function setupFilters() {
+            const b = [...new Set(employees.map(e => String(e.bolumKodu)).filter(Boolean))].sort();
+            const d = [...new Set(employees.map(e => String(e.deptKodu)).filter(Boolean))].sort();
+            b.forEach(v => document.getElementById('f-bolum').innerHTML += `<option value="${v}">${v}</option>`);
+            d.forEach(v => document.getElementById('f-dept').innerHTML += `<option value="${v}">${v}</option>`);
+        }
+
+        function renderApp() {
+            const s = document.getElementById('search').value.toLowerCase();
+            const fb = document.getElementById('f-bolum').value;
+            const fd = document.getElementById('f-dept').value;
+
+            const head = `<tr>
+                <th class="p-2 border sticky top-0 bg-slate-100 z-30 sticky-col w-20">Sicil</th>
+                <th class="p-2 border sticky top-0 bg-slate-100 z-30 sticky-col-2 w-40">Ad Soyad</th>
+                <th class="p-2 border sticky top-0 bg-slate-100">Bölüm</th>
+                <th class="p-2 border sticky top-0 bg-slate-100">Dept</th>
+                ${trainings.map(t => `<th class="p-2 border sticky top-0 bg-slate-100 min-w-[100px] text-center">${t}</th>`).join('')}
+            </tr>`;
+            document.getElementById('t-head').innerHTML = head;
+
             const filtered = employees.filter(e => {
-                const matchSearch = e.adSoyad.toLowerCase().includes(search) || e.sicil.includes(search);
-                const matchBolum = !bolum || String(e.bolumKodu) === bolum;
-                const matchDept = !dept || String(e.deptKodu) === dept;
-                return matchSearch && matchBolum && matchDept;
+                return (e.name.toLowerCase().includes(s) || e.sicil.includes(s)) &&
+                       (!fb || String(e.bolumKodu) === fb) &&
+                       (!fd || String(e.deptKodu) === fd);
             });
 
-            tbody.innerHTML = filtered.map(e => `
-                <tr class="hover:bg-gray-50">
-                    <td class="p-2 border">${e.sicil}</td>
-                    <td class="p-2 border">${e.adSoyad}</td>
-                    <td class="p-2 border">${e.bolumKodu}</td>
-                    <td class="p-2 border">${e.deptKodu}</td>
-                    <td class="p-2 border text-xs">
-                        ${e.egitimler.map(eg => `<span class="inline-block bg-blue-100 m-1 p-1 rounded">${eg.ad} (${eg.tarih})</span>`).join('')}
-                    </td>
+            document.getElementById('t-body').innerHTML = filtered.map(e => `
+                <tr>
+                    <td class="p-2 border sticky-col font-bold">${e.sicil}</td>
+                    <td class="p-2 border sticky-col-2 font-medium">${e.name}</td>
+                    <td class="p-2 border text-slate-500">${e.bolumKodu}</td>
+                    <td class="p-2 border text-slate-500">${e.deptKodu}</td>
+                    ${trainings.map(t => {
+                        const date = e.records[t] || '-';
+                        const isDone = date !== '-';
+                        return `<td class="p-2 border text-center ${isDone ? 'bg-green-50 text-green-700 font-bold' : 'text-slate-300'}">${date}</td>`;
+                    }).join('')}
                 </tr>
             `).join('');
         }
 
-        document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', renderTable));
+        document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', renderApp));
         window.onload = loadData;
     </script>
 </body>
