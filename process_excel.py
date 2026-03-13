@@ -37,10 +37,10 @@ def main():
         sys.exit(1)
 
     header_idx = -1
-    for index, row in df_raw.iterrows():
+    for i, row in df_raw.iterrows():
         row_str = ' '.join(str(x).lower() for x in row.values)
         if 'sicil' in row_str and ('ad' in row_str or 'soyad' in row_str):
-            header_idx = index
+            header_idx = i
             break
             
     if header_idx == -1:
