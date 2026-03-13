@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eğitim Takip Matrisi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #f8fafc; font-family: sans-serif; }
+        .hidden { display: none !important; }
+        .sticky-col-1 { position: sticky; left: 0; z-index: 30; background: white; border-right: 1px solid #e5e7eb; width: 80px; min-width: 80px; }
+        .sticky-col-2 { position: sticky; left: 80px; z-index: 30; background: white; border-right: 1px solid #e5e7eb; width: 160px; min-width: 160px; }
+        .sticky-head-1 { position: sticky; left: 0; top: 0; z-index: 50; background: #f3f4f6; border-right: 1px solid #e5e7eb; width: 80px; min-width: 80px; }
+        .sticky-head-2 { position: sticky; left: 80px; top: 0; z-index: 50; background: #f3f4f6; border-right: 1px solid #e5e7eb; width: 160px; min-width: 160px; }
+        .sticky-top { position: sticky; top: 0; z-index: 40; background: #f3f4f6; }
+    </style>
+</head>
+<body class="flex flex-col h-screen text-slate-800 text-[11px]">
+
+    <header class="bg-white border-b border-gray-200 z-50 shadow-sm flex-none">
+        <div class="max-w-full mx-auto px-4 py-2">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900">Eğitim Takip Matrisi</h1>
+                    <div class="flex items-center gap-1 text-[10px] text-gray-500 mt-1">
+                        <i data-lucide="clock" class="w-3 h-3 text-blue-600"></i>
+                        <span>Personel Başı Hedef: <span class="font-bold text-blue-600">12 Saat</span></span>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
+                    <div class="flex flex-col">
+                        <label class="text-[9px] font-bold text-gray-500 uppercase">İşlem Tarihi</label>
+                        <div class="flex items-center gap-1">
+                            <i data-lucide="calendar" class="w-3 h-3 text-blue-600"></i>
+                            <input type="date" id="action-date" class="bg-transparent text-[11px] font-bold text-gray-900 focus:outline-none cursor-pointer w-24" onchange="updateActionDate(this.value)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                <div class="bg-blue-50 p-2 rounded border border-blue-100 flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-semibold text-blue-600 uppercase">Tamamlanma Oranı</span>
+                        <div id="stat-percent" class="text-xl font-bold text-blue-800">%0</div>
+                    </div>
+                    <i data-lucide="pie-chart" class="text-blue-300 w-8 h-8"></i>
+                </div>
+                <div class="bg-green-50 p-2 rounded border border-green-100 flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-semibold text-green-600 uppercase">Tam Yetkili</span>
+                        <div id="stat-completed" class="text-xl font-bold text-green-800">0</div>
+                    </div>
+                    <i data-lucide="check-circle" class="text-green-300 w-8 h-8"></i>
+                </div>
+                <div class="bg-red-50 p-2 rounded border border-red-100 flex items-center justify-between">
+                    <div>
+                        <span class="text-[9px] font-semibold text-red-600 uppercase">Eksik / Yenileme</span>
+                        <div id="stat-missing" class="text-xl font-bold text-red-800">0</div>
+                    </div>
+                    <i data-lucide="alert-triangle" class="text-red-300 w-8 h-8"></i>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-2">
+                <div class="relative flex-grow">
+                    <i data-lucide="search" class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 w-3 h-3"></i>
+                    <input type="text" placeholder="İsim veya Sicil No ile ara..." class="w-full pl-7 pr-3 py-1.5 text-[11px] border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm h-7" oninput="setSearchTerm(this.value)">
+                </div>
+                
+                <div class="flex gap-2">
+                    <div class="relative min-w-[120px]">
+                        <select id="filter-dept" onchange="setFilterDept(this.value)" class="w-full pl-2 pr-6 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none h-7 bg-white text-[11px]">
+                            <option value="">Tüm Departmanlar</option>
+                        </select>
+                        <i data-lucide="filter" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none w-3 h-3"></i>
+                    </div>
+                    <div class="relative min-w-[120px]">
+                        <select id="filter-bolum" onchange="setFilterBolum(this.value)" class="w-full pl-2 pr-6 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none shadow-sm appearance-none h-7 bg-white text-[11px]">
+                            <option value="">Tüm Bölümler</option>
+                        </select>
+                        <i data-lucide="filter" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none w-3 h-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 overflow-hidden flex flex-col">
+        <div class="bg-white border border-gray-200 shadow-sm rounded flex-1 flex flex-col overflow-hidden">
+            <div class="overflow-auto w-full flex-1 relative">
+                <table class="w-full text-left whitespace-nowrap border-collapse">
+                    <thead id="table-head" class="text-gray-700 bg-gray-50"></thead>
+                    <tbody id="table-body" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="bg-gray-50 border-t border-gray-200 p-2 flex justify-between items-center">
+                <span id="page-info" class="text-[10px] text-gray-600"></span>
+                <div class="flex gap-2">
+                    <button onclick="changePage(-1)" id="btn-prev" class="px-3 py-1 bg-white border border-gray-300 rounded text-[10px] hover:bg-gray-100 disabled:opacity-50">Önceki</button>
+                    <button onclick="changePage(1)" id="btn-next" class="px-3 py-1 bg-white border border-gray-300 rounded text-[10px] hover:bg-gray-100 disabled:opacity-50">Sonraki</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const TARGET_HOURS = 12;
+        const ITEMS_PER_PAGE = 50;
+        
+        let initialTrainings = [
+            { id: 't1', name: 'YASAL İSG G.K.', duration: 2 },
+            { id: 't2', name: 'İSG YASAL SAĞLIK', duration: 2 },
+            { id: 't3', name: 'YASAL İSG T.K.', duration: 4 },
+            { id: 't4', name: 'YASAL İSG T.K. 2', duration: 4 },
+            { id: 't5', name: 'YASAL İSG T.K. 3 (10TK)', duration: 2 },
+            { id: 't6', name: 'VR ATÖLYE', duration: 2 },
+            { id: 't7', name: 'VR LOJİSTİK', duration: 2 },
+            { id: 't8', name: 'TİSK AKADEMİ', duration: 12 }
+        ];
+
+        let employees = [];
+        let trainings = initialTrainings;
+        let actionDate = new Date().toISOString().split('T')[0];
+        let searchTerm = "";
+        let filterBolum = "";
+        let filterDept = "";
+        let currentPage = 1;
+
+        document.getElementById('action-date').value = actionDate;
+
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error('Veri dosyası bulunamadı.');
+                employees = await response.json();
+                renderApp();
+            } catch (error) {
+                document.getElementById('table-body').innerHTML = `<tr><td class="p-4 text-center text-red-500">Veri yüklenemedi: data.json eksik veya hatalı.</td></tr>`;
+            }
+        }
+
+        window.onload = loadData;
+
+        function updateActionDate(val) { actionDate = val; }
+        function setSearchTerm(val) { searchTerm = val.toLowerCase(); currentPage = 1; renderApp(); }
+        function setFilterBolum(val) { filterBolum = val; currentPage = 1; renderApp(); }
+        function setFilterDept(val) { filterDept = val; currentPage = 1; renderApp(); }
+        
+        function changePage(direction) {
+            currentPage += direction;
+            renderApp();
+        }
+
+        function getTrainingStatus(dateString) {
+            if (!dateString) return 'missing';
+            const diffMonths = Math.abs(new Date() - new Date(dateString)) / (1000 * 60 * 60 * 24 * 30);
+            if (diffMonths >= 24) return 'expired';
+            if (diffMonths >= 14) return 'warning';
+            return 'valid';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Intl.DateTimeFormat('tr-TR').format(new Date(dateString));
+        }
+
+        function calculateStats(emp) {
+            let completed = 0;
+            trainings.forEach(t => {
+                if (getTrainingStatus(emp.records[t.id]) === 'valid') completed += t.duration;
+            });
+            return { completed, remaining: Math.max(0, TARGET_HOURS - completed) };
+        }
+
+        function renderApp() {
+            const filtered = employees.filter(e => {
+                const searchMatch = e.name.toLowerCase().includes(searchTerm) || e.sicil.includes(searchTerm);
+                const bolumMatch = filterBolum ? e.bolumKodu === filterBolum : true;
+                const deptMatch = filterDept ? e.deptKodu === filterDept : true;
+                return searchMatch && bolumMatch && deptMatch;
+            });
+
+            const deptSet = new Set(), bolumSet = new Set();
+            employees.forEach(e => { if (e.deptKodu) deptSet.add(e.deptKodu); if (e.bolumKodu) bolumSet.add(e.bolumKodu); });
+            
+            const deptSelect = document.getElementById('filter-dept');
+            if (deptSelect.options.length <= 1) {
+                deptSelect.innerHTML = '<option value="">Tüm Departmanlar</option>' + Array.from(deptSet).sort().map(d => `<option value="${d}">${d}</option>`).join('');
+            }
+            
+            const bolumSelect = document.getElementById('filter-bolum');
+            if (bolumSelect.options.length <= 1) {
+                bolumSelect.innerHTML = '<option value="">Tüm Bölümler</option>' + Array.from(bolumSet).sort().map(b => `<option value="${b}">${b}</option>`).join('');
+            }
+
+            let fullCount = 0;
+            filtered.forEach(e => { if (calculateStats(e).remaining === 0) fullCount++; });
+            
+            document.getElementById('stat-percent').innerText = `%${filtered.length ? Math.round((fullCount/filtered.length)*100) : 0}`;
+            document.getElementById('stat-completed').innerText = fullCount;
+            document.getElementById('stat-missing').innerText = filtered.length - fullCount;
+
+            const thead = `<tr>
+                <th class="sticky-head-1 px-3 py-2 font-bold text-center border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Sicil</th>
+                <th class="sticky-head-2 px-3 py-2 font-bold border-b shadow-[5px_0_5px_-2px_rgba(0,0,0,0.1)]">Ad Soyad</th>
+                <th class="sticky-top px-3 py-2 font-bold border-r border-b w-24">Bölüm</th>
+                <th class="sticky-top px-3 py-2 font-bold border-r border-b w-16">Dept</th>
+                <th class="sticky-top px-1 py-2 font-bold text-center w-16 bg-red-50/90 text-red-900 border-r border-b leading-tight">Kalan<br><span class="text-[9px] font-normal opacity-70">(Saat)</span></th>
+                ${trainings.map(t => `<th class="sticky-top px-2 py-2 border-b font-bold min-w-[90px] text-center border-r"><div class="flex flex-col items-center justify-center h-full"><span class="text-[10px] font-extrabold text-wrap max-w-[80px] mb-1">${t.name}</span><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-gray-200">${t.duration} S</span></div></th>`).join('')}
+            </tr>`;
+            document.getElementById('table-head').innerHTML = thead;
+
+            const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            document.getElementById('page-info').innerText = `Sayfa ${currentPage} / ${totalPages} (Toplam ${filtered.length} Kayıt)`;
+            document.getElementById('btn-prev').disabled = currentPage === 1;
+            document.getElementById('btn-next').disabled = currentPage === totalPages;
+
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const paginated = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+            let tbody = '';
+            paginated.forEach(emp => {
+                const stats = calculateStats(emp);
+                let row = `<tr class="hover:bg-blue-50/30 transition-colors">
+                    <td class="sticky-col-1 px-3 py-1.5 font-medium text-center border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-[11px]">${emp.sicil}</td>
+                    <td class="sticky-col-2 px-3 py-1.5 font-medium border-b shadow-[5px_0_5px_-2px_rgba(0,0,0,0.1)] text-[11px]"><div class="truncate">${emp.name}</div></td>
+                    <td class="px-3 py-1.5 text-gray-600 border-r border-b text-[11px]">${emp.bolumKodu || '-'}</td>
+                    <td class="px-3 py-1.5 text-gray-600 border-r border-b text-[11px]">${emp.deptKodu || '-'}</td>
+                    <td class="px-1 py-1.5 text-center border-r border-b font-bold ${stats.remaining > 0 ? 'bg-red-50/20 text-red-600' : 'bg-green-50/20 text-green-600'} text-[12px]">${stats.remaining}</td>`;
+                
+                trainings.forEach(t => {
+                    const date = emp.records[t.id];
+                    const status = getTrainingStatus(date);
+                    let cellClass = "border-r border-b";
+                    let content = '';
+                    
+                    if (status === 'valid') {
+                        cellClass += " bg-green-100/50 text-green-800";
+                        content = `<div class="flex items-center justify-center gap-1 font-bold text-[10px]"><i data-lucide="check-circle" class="w-3 h-3 text-green-600"></i><span>${formatDate(date)}</span></div>`;
+                    } else if (status === 'warning') {
+                        cellClass += " bg-orange-100 text-orange-800 border-2 border-orange-300 border-dashed";
+                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-orange-600">SÜRE BİTİYOR</span><span class="text-[9px]">${formatDate(date)}</span></div>`;
+                    } else if (status === 'expired') {
+                        cellClass += " bg-red-100 text-red-800 border-2 border-red-300";
+                        content = `<div class="flex flex-col items-center justify-center font-bold text-[9px]"><span class="text-red-600">SÜRESİ DOLDU</span><span class="text-[9px] line-through decoration-red-400 opacity-70">${formatDate(date)}</span></div>`;
+                    } else {
+                        cellClass += " bg-white";
+                        content = `<div class="w-1.5 h-1.5 rounded-full bg-gray-200 mx-auto"></div>`;
+                    }
+                    
+                    row += `<td class="px-1 py-1 text-center h-10 ${cellClass}">${content}</td>`;
+                });
+                row += `</tr>`;
+                tbody += row;
+            });
+            
+            if(paginated.length === 0) {
+                tbody = `<tr><td colspan="${trainings.length + 5}" class="px-4 py-8 text-center text-gray-500 bg-gray-50">Kayıt bulunamadı</td></tr>`;
+            }
+            
+            document.getElementById('table-body').innerHTML = tbody;
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
