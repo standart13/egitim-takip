@@ -2,8 +2,9 @@ name: Veri Guncelleme Otomasyonu
 
 on:
   push:
-    paths:
-      - 'personel_egitim.csv'
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
